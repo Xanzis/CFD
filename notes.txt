@@ -1,0 +1,20 @@
+CFD modelling notes
+
+
+General architecture (hopefully):
+- C-based high-performance backbone to the code with a python wrapper
+- Python implementation of the modelling algorithms in C, for handling one-off computations like boundary geometries and later post-processing.
+- Possibly: HTML for visulaization and final product? Would be nice to get some experience there again.
+
+Roadmap and planning
+- Book covering a basic overview of CFD algorithms as well as optimizations and explanation of turbulence modelling, combustion CFD etc.
+http://mhriau.ac.ir/_DouranPortal/Documents/An%20Introduction%20to%20CFD%20Finite%20volume%20method%20,%20Versteeg%20-%202nd%20Ed%20%20-%20(www.CFDiran.ir)_20160302_120321.pdf
+- Read and take notes. Once outline of a simulator is clear, write a program to implement. Progress with upgrades and optimizations along with the book.
+
+- Book addressing the computational side of things: 
+https://www.researchgate.net/profile/Ahmed_Al_Makky/publication/310501995_Coding_Tutorials_for_Computational_Fluid_Dynamics/links/58305e4d08ae004f74c0eec6/Coding-Tutorials-for-Computational-Fluid-Dynamics.pdf
+
+Programmer’s tutorial for a fluid dynamics project - probably a good jumping-off point:
+https://www.mikeash.com/pyblog/fluid-simulation-for-dummies.html
+
+- Work in more specific experimental programs for the real final project - design of the LF engine
