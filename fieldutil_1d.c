@@ -17,6 +17,7 @@ boundaryCell *boundaries;
 int IS_BOUNDARY_ROWLEN;
 
 static int FLD_XCELLS;
+static int NUMBEROFBOUNDARIES;
 
 scalarVar **scalar_field;
 
@@ -96,8 +97,8 @@ void setupBoundary() {
 	memset(is_boundary, 0, wordsNecessary * WORD_SIZE_BYTES);
 
 	// ENTER BOUNDARIES HERE. Automate (and add bodies function) later.
-	int numberOfBoundaries = 2;
-	boundaries = malloc(sizeof(boundaryCell) * numberOfBoundaries);
+	NUMBEROFBOUNDARIES = 2;
+	boundaries = malloc(sizeof(boundaryCell) * NUMBEROFBOUNDARIES);
 
 	boundaries[0] = (boundaryCell) {-1, 0, 0, 0, 0, 1, 7};
 	boundaries[1] = (boundaryCell) {FLD_XCELLS, 1, 50, 0, 0, 0, 0}; // figure out number for the case to test later
@@ -114,9 +115,7 @@ void FIELDUTIL_setup(int XscalarCenterNo) {
 
 	setupUField();
 	setupScalarField();
-	//setupUField();
 	setupBoundary();
-	genericError("What's happening y'all");
 	didSetup = 1;
 }
 
@@ -204,11 +203,11 @@ boundaryCell FLD_getBoundary(coordinate coord) {
 	}
 
 	int x = coord.x;
-	if ((x >= FLD_XCELLS + 2) || (x < 0)) {
+	if ((x >= FLD_XCELLS + 2) || (x < -1)) {
 		genericError("FLD_getBoundary input out of range");
 	}
 	//search (via wikipedia) (which was found via search lol)
-	int m = 0, L = 0, R = FLD_XCELLS + 1; // +1 bc 1 less than +2
+	int m = 0, L = 0, R = NUMBEROFBOUNDARIES - 1;
 	boundaryCell currentBoundary;
 	int currentX;
 	while (L <= R) {
