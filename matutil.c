@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include "nrutil.h"
 
 // Remember, matrices are referenced like so:
@@ -56,9 +57,7 @@ void MAT_graphvector(float *in_vector, int n) {
 
 void MAT_zerovector(float *in_vector, int n) {
 	//Zero out a 0-indexed vector of size n
-	for (int i = 0; i < n; i++) {
-		in_vector[i] = 0;
-	}
+	memset(in_vector, 0, sizeof (float) * n);
 }
 
 void MAT_zeromatrix(float **in_matrix, int rowNum, int colNum) {

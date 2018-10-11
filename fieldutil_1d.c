@@ -226,4 +226,5 @@ boundaryCell FLD_getBoundary(coordinate coord) {
 	}
 	// Failure 
 	genericError("FLD_getBoundary search failed");
+	return currentBoundary;
 }
