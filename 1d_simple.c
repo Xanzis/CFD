@@ -1,0 +1,292 @@
+#include <stdio.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <math.h>
+#include "nrutil.h"
+#include "matutil.h"
+
+float L;
+float AREA;
+int N; // number of scalar cells. there are one fewer velocity cells.
+float CELLSTEP;
+
+float DENSITY;
+float GAMMA; // Diffusive term
+
+float *U_FIELD;
+float *U_FIELD_STAR; // U field new values
+
+float *P_FIELD;
+float *P_FIELD_PRIME; // P field correction
+
+float BIGNUM;
+float SMALLNUM;
+
+int VERBOSE;
+
+typedef struct icoord icoord;
+struct icoord {
+	int i;
+	int iCap;
+}
+
+int i_toMat(icoord loc) {
+	// If iCap is 1, don't change. If iCap is 0, subtract one
+	int shift = 1 - loc.iCap;
+	return loc.i - shift;
+}
+
+icoord mat_toI(int loc, int iCap) {
+	int shift = 1 - iCap;
+	return (icoord) {loc + shift, iCap};
+}
+
+void simerror(char *error_text) {
+	printf("Top level simulation error. Error message follows:\n%s", error_text);
+	printf("\nExiting ...\n");
+	exit(1);
+}
+
+void setupBoundaries() {
+	// intializes P and U values at relevant inletsand outlets to what they will stay at for differencing. A different function is in charge of cancelling changes during differencing
+	U_FIELD[1] = 10; // inlet velocity = 10 m/s
+	P_FIELD[0] = 10; //inlet pressure = 10Pa
+	P_FIELD[N - 1] = 0; // outlet pressure = 0Pa
+	// That's all the constants in this 1d case. For 2d, adapt to be procedural 
+}
+
+int validUIDX(int idx) {
+	// returns 1 if idx is a valid index of U_FIELD
+	if (1 <= idx && idx < N) {
+		return 1;
+	}
+	return 0;
+}
+
+float getF(icoord loc, int w, int e) {
+	// Gets the value of F from the coord in the given direction, averaging when necessary
+	// If the value is over the edge of the variable array, return 0. It won't matter, as edge variables will be overwritten by boundary conditions
+	float res = 0;
+	int idx = 0;
+	float temp;
+	switch (loc.iCap) {
+		case 0:
+			//It's a u center
+			if (w) {
+				idx = loc.i - 1;
+				if (validUIDX(idx)) {
+					temp = U_FIELD[idx] * 0.5; // Need to follow this up with density averaging when I move to compressible flows
+					idx += 1;
+				}
+				else {
+					return 0;
+				}
+				if (validUIDX(idx)) {
+					temp += U_FIELD[idx] * 0.5
+				}
+				else {
+					return 0;
+				}
+			}
+			else if (e) {
+				idx = loc.i;
+				if (validUIDX(idx)) {
+					temp = U_FIELD[idx] * 0.5; // Need to follow this up with density averaging when I move to compressible flows
+					idx += 1;
+				}
+				else {
+					return 0;
+				}
+				if (validUIDX(idx)) {
+					temp += U_FIELD[idx] * 0.5
+				}
+				else {
+					return 0;
+				}
+			}
+			break;
+		case 1:
+			// It's a center point
+			if (w) {
+				idx = loc.i;
+				if (validUIDX(idx)) {
+					res = U_FIELD[idx]; // Needed to check if it was within array bounds first. If not it'll just return 0
+				}
+			}
+			else if (e) {
+				idx = loc.i + 1;
+				if (validUIDX(idx)) {
+					res = U_FIELD[idx];
+				}
+			}
+			break;
+		default:
+			simerror("Invalid iCap value in getF");
+			return 0;
+	}
+	res *= DENSITY; //looks like area doesn't actually go in here, interestingly enough
+}
+
+float getD(icoord loc, int w, int e) {
+	// Ditto
+	return GAMMA / CELLSTEP; // This will need rethinking quite soon, but for now it's best to get the system running
+	// by the way I need to figure out changing gamma for momentum differencing. Look at k-E theory soon, keep viscosity at 0 for now.
+}
+
+float ap_hybrid(icoord loc) {
+	//Applies the hybrid difference scheme to get ap at a single point loc.
+
+	Fw = getF(loc, 1, 0);
+	Fe = getF(loc, 0, 1);
+	Dw = getD(loc, 1, 0);
+	De = getD(loc, 0, 1);
+
+	temp = Dw + (Fw / 2);
+	float w = max_3f(Fw, temp, 0);
+
+	temp = De - (Fe / 2);
+	float e = max_3f(- Fe, temp, 0);
+
+	deltaF = De - Dw;
+	return w[i] + e[i] + deltaF; // ap
+}
+
+void applydifference_hybrid(p, w, e, iCap) {
+	float Fw, Fe, Dw, De;
+	float temp, peclet;
+	// Starts at 1-iCap because if I is capitalized it's P, which is 0-indexed
+	for (int i = 1 - iCap; i <= N; i++) {
+		icoord loc = {i, iCap};
+
+		Fw = getF(loc, 1, 0);
+		Fe = getF(loc, 0, 1);
+		Dw = getD(loc, 1, 0);
+		De = getD(loc, 0, 1);
+
+		temp = Dw + (Fw / 2);
+		w[i] = max_3f(Fw, temp, 0);
+
+		temp = De - (Fe / 2);
+		e[i] = max_3f(- Fe, temp, 0);
+
+		deltaF = De - Dw;
+		p[i] = w[i] + e[i] + deltaF; // since sp hasn't been calculated it still needs to be subtracted
+	}
+	// This incarnation of the function is source-agnostic. All boundary-related source terms should be added after calling this.
+	// If I is capitalized, it's a scalar center. If not, it's u
+
+	//Important! Need separate length as for scalar vs. velocity stuff.
+	//Or maybe just zero in between runs and feed the solver smaller dimensions
+}
+
+void differencePressure(su) {
+	// See p186 of the book. During momentum differencing, pressure difference terms are added onto su
+	// iterating 1-N through u. But! For differencing, everything needs to shifted back to 0. So u a vectors run from 0 to N-1
+	for (int i = 0; i < N - 1; i++) {
+		su[i] += (P_FIELD[i] - P_FIELD[i + 1]) * AREA;
+	}
+}
+
+void initializeUField() {
+	//stuff
+	//Maybe Gaussian noise?
+	float seq[10] = {3, 5, 7, 2, 4, 6, 3, 4, 6, 8};
+	int idx = 0;
+
+	for (int i = 1; i < N; i++) {
+		if (idx <= 10) {
+			idx = 0;
+		}
+		U_FIELD[i] = seq[idx];
+		idx++;
+	}
+	// Boundary value setting is doen by a setup function
+}
+
+void initializePField() {
+	// also stuff
+	float seq[10] = {2, 6, 3, 8, 6, 4, 5, 3, 2, 9};
+	int idx = 0;
+
+	for (int i = 1; i < N; i++) {
+		if (idx <= 10) {
+			idx = 0;
+		}
+		U_FIELD[i] = seq[idx];
+		idx++;
+	}
+}
+
+void applyBoundaries(float *su, float *sp, int type) {
+	// type determines what boundary conditions to account for - 0pressure correction, 1u, 2phi1
+	switch (type) {
+		case 0:
+			//Pressure corrections at inlet and outlet boundaries are 0
+			su[0] = 0;
+			sp[0] = SMALLNUM;
+			su[N-1] = 0;
+
+			break;
+		case 1:
+			break;
+		case 2:
+			break;
+		default:
+			simerror("Invalid diffrencing type fed to applyBoundaries");
+	}
+}
+
+void setup() {
+	BIGNUM = (float) pow(10, 20);
+	SMALLNUM = - BIGNUM;
+
+	L = 1.0;
+	N = 5;
+	CELLSTEP = L / (float) CELLNUM; //Fine but because of boundary overhang this won't actually be the sim length
+	AREA = CELLSTEP * CELLSTEP;
+
+	DENSITY = 1;
+	GAMMA = 0.1;
+
+	U_FIELD = vector(1, N);
+	U_FIELD_PRIME = vector(1, N); //Figure out how to zero these properly given that zerovector only works with zero-indexed.
+	// Maybe MAT_zerovector(U_FIELD + 1, N)?
+
+	P_FIELD = vector(0, N);
+	P_FIELD_PRIME = vector(0, N);
+
+	VERBOSE = 1;
+
+	initializeUField();
+	initializePField();
+	setupBoundaries();
+}
+
+void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, float *su, int target_isoneindexed, int n_var) {
+	// Solves the form of equation that comes up a few times, where (cp[n] - sp[n])phi[n] = sum(c[nb]phi[nb]) + su
+	// or rather (cp[n] - sp[n])phi[n] - sum(c[nb]phi[nb]) = su
+	// For n_var variables. I know, this is available from the environment conditions, but ideally this function is nice and agnostic.
+	// Places resulting solved phi vector into target. DESTRUCTIVELY USES SU
+	coeff = matrix()
+
+
+}
+
+int main() {
+	float *ap, *aw, *ae, *su, *sp; //same a vectors for each differencing operation, but U stuff is 1-indexed. Remember that
+	sp = vector(0, N);
+	su = vector(0, N);
+	ap = vector(0, N);
+	aw = vector(0, N);
+	ae = vector(0, N);
+
+
+}
+
+// Store edge boundaries separately from internal stuff. Should make indexing those simple cases (in a consistent way too) easy.
+// Also remember - each edge boundary needs to account for all the possible edge influences
+// see book's list of boundary types
+// In differencing need to check what kind of boundary everything is -- NOPE! boundary-related source should occur outside of differencing
+
+// By the way, the way the differencing works right now it's not necessarily cutting off links to boundaries - and if it does it's accidental
+// This means it may be necessary to zero out some aw, ae etc. when post processing the returned as before solving.
