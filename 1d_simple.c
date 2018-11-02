@@ -266,9 +266,31 @@ void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, floa
 	// Solves the form of equation that comes up a few times, where (cp[n] - sp[n])phi[n] = sum(c[nb]phi[nb]) + su
 	// or rather (cp[n] - sp[n])phi[n] - sum(c[nb]phi[nb]) = su
 	// For n_var variables. I know, this is available from the environment conditions, but ideally this function is nice and agnostic.
-	// Places resulting solved phi vector into target. DESTRUCTIVELY USES SU
-	coeff = matrix()
+	// Places resulting solved phi vector into target. 
 
+
+	float **coeff = matrix(0, n_var - 1, 0, n_var - 1);
+	float *rhs = vector(0, n_var - 1); // right hand side of the equation coeff . phi = rhs
+
+	int i_ref = 0;
+	int w_idx, e_idx;
+	for (int i = 0; i < n_var; i++) {
+		i_ref = i + target_isoneindexed;
+		// Hopefully this should expand well to 2d. 
+		w_idx = i_ref - 1;
+		e_idx = i_ref + 1;
+
+		rhs[i] = su[i_ref];
+		coeff[i][i] = cp[i_ref] - sp[i_ref];
+		if (i > 0) {
+			coeff[i][i - 1] = - cw[i_ref];
+		}
+		if (i < n_var - 1) {
+			coeff[i][i + 1] = - ce[i_ref];
+		}
+	}
+
+	*target = MAT_solve_gausselim(coeff, rhs, n_var)
 
 }
 
