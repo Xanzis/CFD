@@ -21,6 +21,7 @@ float *P_FIELD_PRIME; // P field correction
 
 float BIGNUM;
 float SMALLNUM;
+float ALPHA; // under-relaxation factor
 
 int VERBOSE;
 
@@ -240,6 +241,8 @@ void setup() {
 	BIGNUM = (float) pow(10, 20);
 	SMALLNUM = - BIGNUM;
 
+	ALPHA = 0.1;
+
 	L = 1.0;
 	N = 5;
 	CELLSTEP = L / (float) CELLNUM; //Fine but because of boundary overhang this won't actually be the sim length
@@ -267,7 +270,7 @@ void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, floa
 	// or rather (cp[n] - sp[n])phi[n] - sum(c[nb]phi[nb]) = su
 	// For n_var variables. I know, this is available from the environment conditions, but ideally this function is nice and agnostic.
 	// Places resulting solved phi vector into target. 
-
+	// For most transport work - Fw, Fe differential needs to be incorporated into ap 
 
 	float **coeff = matrix(0, n_var - 1, 0, n_var - 1);
 	float *rhs = vector(0, n_var - 1); // right hand side of the equation coeff . phi = rhs
@@ -290,18 +293,47 @@ void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, floa
 		}
 	}
 
-	*target = MAT_solve_gausselim(coeff, rhs, n_var)
-
+	float *temp = MAT_solve_gausselim(coeff, rhs, n_var)
+	for (int i = 0; i < n_var; i++) {
+		i_ref = i + target_isoneindexed;
+		target[i_ref] = temp[i];
+	}
+	free_vector(temp, 0, n_var - 1);
+	free_vector(rhs, 0, n_var - 1);
+	free_matrix(coeff, 0, n_var - 1, 0, n_var - 1); // freeing the pointers which aren't temp may not be necessary
+	// The above mess was done because I don't know how c memory management works. Is it as simple as target = temp - isoneindexed? Help
 }
 
 int main() {
+	setup();
 	float *ap, *aw, *ae, *su, *sp; //same a vectors for each differencing operation, but U stuff is 1-indexed. Remember that
 	sp = vector(0, N);
 	su = vector(0, N);
 	ap = vector(0, N);
 	aw = vector(0, N);
 	ae = vector(0, N);
+	// setup has already initialized guesses of p and u. Begin convergence loop
+	int notconverged = 1
+	while (notconverged) {
+		// 1. Solve momentum equations
+		// 1a momentum differencing
+		// 1b applying momentum boundary constraints
+		// 1c solve equations, feeding results directly into the u field!! - this gives the 'initial guess' of velocities from the stated pressure field
 
+		// 2. Solve pressure correction equation
+		// 2a pressure differencing
+		// 2b apply pressure differencing boundary influences
+		// 2c solve equations, feeding results into pressure correction matrix
+
+		// 3. Apply U, P correction
+		// 3a add solved correction values into u and p matrices
+		// note: see p189 for details on under-relaxation - it's not what you think
+
+		// 4. Solve all other convection-diffusion problems
+		// 4a nothing for this so far - but may want a generic convection-diffuision program for scalar variables
+
+		// 5. Decide whether or not the solution has converged
+	}
 
 }
 
