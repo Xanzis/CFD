@@ -15,6 +15,7 @@ float GAMMA; // Diffusive term
 
 float *U_FIELD;
 float *U_FIELD_STAR; // U field new values
+float *U_FIELD_PRIME; // U field correction
 
 float *P_FIELD;
 float *P_FIELD_PRIME; // P field correction
@@ -253,10 +254,18 @@ void setup() {
 
 	U_FIELD = vector(1, N);
 	U_FIELD_PRIME = vector(1, N); //Figure out how to zero these properly given that zerovector only works with zero-indexed.
+	U_FIELD_STAR = vector(1, N);
 	// Maybe MAT_zerovector(U_FIELD + 1, N)?
 
 	P_FIELD = vector(0, N);
 	P_FIELD_PRIME = vector(0, N);
+
+	MAT_zerovector_range(U_FIELD, 1, N);
+	MAT_zerovector_range(U_FIELD_PRIME, 1, N);
+	MAT_zerovector_range(U_FIELD_STAR, 1, N);
+
+	MAT_zerovector(P_FIELD, N + 1); //0 to N is N+1 elements
+	MAT_zerovector(P_FIELD_PRIME, N + 1);
 
 	VERBOSE = 1;
 
@@ -318,7 +327,7 @@ int main() {
 		// 1. Solve momentum equations
 		// 1a momentum differencing
 		// 1b applying momentum boundary constraints
-		// 1c solve equations, feeding results directly into the u field!! - this gives the 'initial guess' of velocities from the stated pressure field
+		// 1c solve equations, feeding results into u star- this gives the 'initial guess' of velocities from the stated pressure field
 
 		// 2. Solve pressure correction equation
 		// 2a pressure differencing
@@ -336,7 +345,7 @@ int main() {
 	}
 
 }
-
+//Keep at it!!!
 // Store edge boundaries separately from internal stuff. Should make indexing those simple cases (in a consistent way too) easy.
 // Also remember - each edge boundary needs to account for all the possible edge influences
 // see book's list of boundary types

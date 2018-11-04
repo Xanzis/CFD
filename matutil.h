@@ -5,6 +5,7 @@ void matutilerror(char *error_text);
 void MAT_printmatrix(float **in_matrix, int rowNum, int colNum);
 void MAT_printvector(float *in_vector, int n);
 void MAT_zerovector(float *in_vector, int n);
+void MAT_zerovector_range(float *in_vector, int stidx, int endidx);
 void MAT_zeromatrix(float **in_matrix, int rowNum, int colNum);
 void MAT_graphvector(float *in_vector, int n);
 float f_abs(float x);

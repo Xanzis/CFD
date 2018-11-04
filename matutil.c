@@ -60,6 +60,12 @@ void MAT_zerovector(float *in_vector, int n) {
 	memset(in_vector, 0, sizeof (float) * n);
 }
 
+void MAT_zerovector_range(float *in_vector, int stidx, int endidx) {
+	for (int i = stidx; i <= endidx; i++) {
+		in_vector[i] = 0;
+	}
+}
+
 void MAT_zeromatrix(float **in_matrix, int rowNum, int colNum) {
 	for (int row = 0; row < rowNum; row++) {
 		for (int col = 0; col < colNum; col++) {
