@@ -7,6 +7,8 @@ void MAT_printvector(float *in_vector, int n);
 void MAT_zerovector(float *in_vector, int n);
 void MAT_zerovector_range(float *in_vector, int stidx, int endidx);
 void MAT_zeromatrix(float **in_matrix, int rowNum, int colNum);
+void MAT_setmatrix(float **a, float **b, int rowst, int rowend, int colst, int colend);
+void MAT_addmatrix(float **a, float **b, int rowst, int rowend, int colst, int colend);
 void MAT_graphvector(float *in_vector, int n);
 float f_abs(float x);
 float **MAT_multiply_mm(float **a_matrix, float **b_matrix, int a_rowNum, int a_colNum, int b_rowNum, int b_colNum);

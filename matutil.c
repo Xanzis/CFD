@@ -74,6 +74,24 @@ void MAT_zeromatrix(float **in_matrix, int rowNum, int colNum) {
 	}
 }
 
+void MAT_setmatrix(float **a, float **b, int rowst, int rowend, int colst, int colend) {
+	// Sets a = b within the given boundaries (inclusively)
+	for (int col = colst; col <= colend; col++) {
+		for (int row = rowst; row <= rowend; row++) {
+			a[row][col] = b[row][col];
+		}
+	}
+}
+
+void MAT_addmatrix(float **a, float **b, int rowst, int rowend, int colst, int colend) {
+	// Sets a += b within the given boundaries (inclusively)
+	for (int col = colst; col <= colend; col++) {
+		for (int row = rowst; row <= rowend; row++) {
+			a[row][col] += b[row][col];
+		}
+	}
+}
+
 float f_abs(float x) {
 	//Needed an abs for floats bc the c abs is integer-only :(
 	if (x < 0) return x * -1;

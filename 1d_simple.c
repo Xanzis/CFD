@@ -219,23 +219,24 @@ void initializePField() {
 	}
 }
 
-void applyBoundaries(float *su, float *sp, int type) {
-	// type determines what boundary conditions to account for - 0pressure correction, 1u, 2phi1
-	switch (type) {
-		case 0:
-			//Pressure corrections at inlet and outlet boundaries are 0
-			su[0] = 0;
-			sp[0] = SMALLNUM;
-			su[N-1] = 0;
+// Following three function apply different types of boundaries: pressure, velocity, and all other generic scalars
+// In the future 2d version, these will end up reading from file to determine the boundary structure;
+// this file can then be written by a python program, letting me do the higher-level work away from C.
 
-			break;
-		case 1:
-			break;
-		case 2:
-			break;
-		default:
-			simerror("Invalid diffrencing type fed to applyBoundaries");
-	}
+void applyPressureBoundaries(float *su, float *sp) {
+	//Pressure corrections at inlet and outlet boundaries are 0
+	su[0] = 0;
+	sp[0] = SMALLNUM;
+	su[N-1] = 0;
+}
+
+void applyVelocityBoundaries(float *su, float *sp) {
+	// Applies sources to velocity matrix from walls and inlets.
+	// Check indexing to make sure indexing works out with inputs to solveSystem.
+}
+
+void applyScalarBoundaries(float *su, float *sp, float scalarNum) {
+	// Empty for now. scalarNum gives ID of the scalar variable function is applied to.
 }
 
 void setup() {
@@ -326,11 +327,23 @@ int main() {
 	while (notconverged) {
 		// 1. Solve momentum equations
 		// 1a momentum differencing
+		applydifference_hybrid(ap, aw, ae, 0); // lowercase i for inter scalar-cell values. 
+				// Eventually split this off the generic differencing function to properly treat velocity diffusion different from mass diffusion.
+				//  -> -> -> Check that indexing is the same as in solvesystem!
 		// 1b applying momentum boundary constraints
+		applyVelocityBoundaries(su, sp);
 		// 1c solve equations, feeding results into u star- this gives the 'initial guess' of velocities from the stated pressure field
+		solveSystem(U_FIELD_STAR, ap, aw, ae, sp, su, 0, N); // there should be N velocity elements, and u cells are not i-capitalized
+
+		MAT_zerovector(ap, N+1);
+		MAT_zerovector(aw, N+1);
+		MAT_zerovector(ae, N+1);
+		MAT_zerovector(sp, N+1);
+		MAT_zerovector(su, N+1);
+		// Assuming that from here forward it should still usethe 
 
 		// 2. Solve pressure correction equation
-		// 2a pressure differencing
+		// 2a pressure differencing -- the differencing here is quite different from standard
 		// 2b apply pressure differencing boundary influences
 		// 2c solve equations, feeding results into pressure correction matrix
 
