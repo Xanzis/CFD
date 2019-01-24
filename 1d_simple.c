@@ -153,7 +153,7 @@ float ap_hybrid(icoord loc) {
 	return w[i] + e[i] + deltaF; // ap
 }
 
-void applydifference_hybrid(p, w, e, iCap) {
+void applydifference_hybrid(float *p, float *w, float *e, int iCap) {
 	float Fw, Fe, Dw, De;
 	float temp, peclet;
 	// Starts at 1-iCap because if I is capitalized it's P, which is 0-indexed
@@ -181,9 +181,14 @@ void applydifference_hybrid(p, w, e, iCap) {
 	//Or maybe just zero in between runs and feed the solver smaller dimensions
 }
 
-void differencePressure(su) {
+void applydifference_pressure(float *p, float *w, float *e) {
+	// Look through book. Do it.
+}
+
+void deltaPressure(float *su) {
 	// See p186 of the book. During momentum differencing, pressure difference terms are added onto su
 	// iterating 1-N through u. But! For differencing, everything needs to shifted back to 0. So u a vectors run from 0 to N-1
+	// -> -> -> CHECK IF THIS WORKS WITH CURRENT INDEXING. NOT SURE IT DOES
 	for (int i = 0; i < N - 1; i++) {
 		su[i] += (P_FIELD[i] - P_FIELD[i + 1]) * AREA;
 	}
@@ -332,6 +337,7 @@ int main() {
 				//  -> -> -> Check that indexing is the same as in solvesystem!
 		// 1b applying momentum boundary constraints
 		applyVelocityBoundaries(su, sp);
+		deltaPressure(su); // aside from boundaries, pressure difference effects need to be fed in to su. This just adds
 		// 1c solve equations, feeding results into u star- this gives the 'initial guess' of velocities from the stated pressure field
 		solveSystem(U_FIELD_STAR, ap, aw, ae, sp, su, 0, N); // there should be N velocity elements, and u cells are not i-capitalized
 
@@ -344,9 +350,11 @@ int main() {
 
 		// 2. Solve pressure correction equation
 		// 2a pressure differencing -- the differencing here is quite different from standard
+		applydifference_pressure(ap, aw, ae, 1);
 		// 2b apply pressure differencing boundary influences
+		applyPressureBoundaries(su, sp);
 		// 2c solve equations, feeding results into pressure correction matrix
-
+		solveSystem(P_FIELD_PRIME)
 		// 3. Apply U, P correction
 		// 3a add solved correction values into u and p matrices
 		// note: see p189 for details on under-relaxation - it's not what you think
