@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "nrutil.h"
 
 // Remember, matrices are referenced like so:
@@ -92,12 +93,6 @@ void MAT_addmatrix(float **a, float **b, int rowst, int rowend, int colst, int c
 	}
 }
 
-float f_abs(float x) {
-	//Needed an abs for floats bc the c abs is integer-only :(
-	if (x < 0) return x * -1;
-	return x;
-}
-
 float **MAT_multiply_mm(float **a_matrix, float **b_matrix, int a_rowNum, int a_colNum, int b_rowNum, int b_colNum) {
 	if (a_colNum != b_rowNum) { matutilerror("Incompatible matrix dimensions in MAT_multiply_mm"); }
 
@@ -157,7 +152,7 @@ float *MAT_solve_gausselim(float **in_matrix, float *b, int n) {
 		max_row = -1;
 		max_value = 0;
 		for (int i = col; i < n; i++) {
-			temp = f_abs(in_matrix[i][col]);
+			temp = fabsf(in_matrix[i][col]);
 			if (temp > max_value) {
 				max_row = i;
 				max_value = temp;

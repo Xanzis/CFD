@@ -10,7 +10,6 @@ void MAT_zeromatrix(float **in_matrix, int rowNum, int colNum);
 void MAT_setmatrix(float **a, float **b, int rowst, int rowend, int colst, int colend);
 void MAT_addmatrix(float **a, float **b, int rowst, int rowend, int colst, int colend);
 void MAT_graphvector(float *in_vector, int n);
-float f_abs(float x);
 float **MAT_multiply_mm(float **a_matrix, float **b_matrix, int a_rowNum, int a_colNum, int b_rowNum, int b_colNum);
 float *MAT_multiply_mv(float **a_matrix, float *b_vector, int a_rowNum, int a_colNum, int b_rowNum);
 float *MAT_solve_gausselim(float **in_matrix, float *b, int n);
