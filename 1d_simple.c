@@ -198,36 +198,6 @@ void deltaPressure(float *su) {
 	}
 }
 
-void initializeUField() {
-	//stuff
-	//Maybe Gaussian noise?
-	float seq[10] = {3, 5, 7, 2, 4, 6, 3, 4, 6, 8};
-	int idx = 0;
-
-	for (int i = 1; i < N; i++) {
-		if (idx <= 10) {
-			idx = 0;
-		}
-		U_FIELD[i] = seq[idx];
-		idx++;
-	}
-	// Boundary value setting is doen by a setup function
-}
-
-void initializePField() {
-	// also stuff
-	float seq[10] = {2, 6, 3, 8, 6, 4, 5, 3, 2, 9};
-	int idx = 0;
-
-	for (int i = 1; i < N; i++) {
-		if (idx <= 10) {
-			idx = 0;
-		}
-		U_FIELD[i] = seq[idx];
-		idx++;
-	}
-}
-
 // Following three function apply different types of boundaries: pressure, velocity, and all other generic scalars
 // In the future 2d version, these will end up reading from file to determine the boundary structure;
 // this file can then be written by a python program, letting me do the higher-level work away from C.
@@ -287,16 +257,37 @@ void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, floa
 	// The above mess was done because I don't know how c memory management works. Is it as simple as target = temp - isoneindexed? Help
 }
 
+void initializeUField() {
+	float num;
+	float maxval = 5;
+
+	for (int i = 1; i <= N; i++) {
+		num = (float) rand() / (float) RAND_MAX;
+		U_FIELD[i] = num * maxval;
+	}
+	// Boundary value setting is doen by a setup function
+}
+
+void initializePField() {
+	float num;
+	float maxval = 5;
+
+	for (int i = 0; i <= N; i++) {
+		num = (float) rand() / (float) RAND_MAX;
+		P_FIELD[i] = num * maxval;
+	}
+}
 
 void setupBoundaries() {
 	// intializes P and U values at relevant inletsand outlets to what they will stay at for differencing. A different function is in charge of cancelling changes during differencing
 	U_FIELD[1] = 10; // inlet velocity = 10 m/s
 	P_FIELD[0] = 10; //inlet pressure = 10Pa
-	P_FIELD[N - 1] = 0; // outlet pressure = 0Pa
+	P_FIELD[N] = 0; // outlet pressure = 0Pa
 	// That's all the constants in this 1d case. For 2d, adapt to be procedural 
 }
 
 void setup() {
+	srand((int) 8);
 	BIGNUM = (float) pow(10, 20);
 	SMALLNUM = - BIGNUM;
 
@@ -335,6 +326,10 @@ void setup() {
 int main() {
 	printf("Setting up...\n");
 	setup();
+	printf("U Field:\n");
+	MAT_printvector_range(U_FIELD, 1, N);
+	printf("P Field:\n");
+	MAT_printvector(P_FIELD, N+1);
 	printf("Setup Complete. Beginning convergence loops.\n");
 
 	float *ap, *aw, *ae, *su, *sp; //same a vectors for each differencing operation, but U stuff is 1-indexed. Remember that
