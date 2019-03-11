@@ -32,6 +32,15 @@ void MAT_printvector(float *in_vector, int n) {
 	printf("\n");
 }
 
+void MAT_printvector_range(float *in_vector, int stid, int endid) {
+	for (int i = stid; i <= endid; i++) {
+		printf(" %5f ", in_vector[i]);
+		printf("\n");
+	}
+	printf("\n");
+}
+
+
 void MAT_graphvector(float *in_vector, int n) {
 	int width = 100;
 	float lower = in_vector[0];
@@ -61,8 +70,8 @@ void MAT_zerovector(float *in_vector, int n) {
 	memset(in_vector, 0, sizeof (float) * n);
 }
 
-void MAT_zerovector_range(float *in_vector, int stidx, int endidx) {
-	for (int i = stidx; i <= endidx; i++) {
+void MAT_zerovector_range(float *in_vector, int stid, int endid) {
+	for (int i = stid; i <= endid; i++) {
 		in_vector[i] = 0;
 	}
 }

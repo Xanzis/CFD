@@ -30,6 +30,16 @@ typedef struct icoord icoord;
 struct icoord {
 	int i;
 	int iCap;
+};
+
+float max_3f(float a, float b, float c) {
+	// maximimum of three inputs :/
+	if (a > b) {
+		if (c > a) return c;
+		return a;
+	}
+	if (b > c) return b;
+	return c;
 }
 
 int i_toMat(icoord loc) {
@@ -47,14 +57,6 @@ void simerror(char *error_text) {
 	printf("Top level simulation error. Error message follows:\n%s", error_text);
 	printf("\nExiting ...\n");
 	exit(1);
-}
-
-void setupBoundaries() {
-	// intializes P and U values at relevant inletsand outlets to what they will stay at for differencing. A different function is in charge of cancelling changes during differencing
-	U_FIELD[1] = 10; // inlet velocity = 10 m/s
-	P_FIELD[0] = 10; //inlet pressure = 10Pa
-	P_FIELD[N - 1] = 0; // outlet pressure = 0Pa
-	// That's all the constants in this 1d case. For 2d, adapt to be procedural 
 }
 
 int validUIDX(int idx) {
@@ -84,7 +86,7 @@ float getF(icoord loc, int w, int e) {
 					return 0;
 				}
 				if (validUIDX(idx)) {
-					temp += U_FIELD[idx] * 0.5
+					temp += U_FIELD[idx] * 0.5;
 				}
 				else {
 					return 0;
@@ -100,7 +102,7 @@ float getF(icoord loc, int w, int e) {
 					return 0;
 				}
 				if (validUIDX(idx)) {
-					temp += U_FIELD[idx] * 0.5
+					temp += U_FIELD[idx] * 0.5;
 				}
 				else {
 					return 0;
@@ -137,6 +139,8 @@ float getD(icoord loc, int w, int e) {
 
 float ap_hybrid(icoord loc) {
 	//Applies the hybrid difference scheme to get ap at a single point loc.
+	float Fw, Fe, Dw, De;
+	float temp;
 
 	Fw = getF(loc, 1, 0);
 	Fe = getF(loc, 0, 1);
@@ -149,8 +153,8 @@ float ap_hybrid(icoord loc) {
 	temp = De - (Fe / 2);
 	float e = max_3f(- Fe, temp, 0);
 
-	deltaF = De - Dw;
-	return w[i] + e[i] + deltaF; // ap
+	float deltaF = De - Dw;
+	return w + e + deltaF; // ap
 }
 
 void applydifference_hybrid(float *p, float *w, float *e, int iCap) {
@@ -171,7 +175,7 @@ void applydifference_hybrid(float *p, float *w, float *e, int iCap) {
 		temp = De - (Fe / 2);
 		e[i] = max_3f(- Fe, temp, 0);
 
-		deltaF = De - Dw;
+		float deltaF = De - Dw;
 		p[i] = w[i] + e[i] + deltaF; // since sp hasn't been calculated it still needs to be subtracted
 	}
 	// This incarnation of the function is source-agnostic. All boundary-related source terms should be added after calling this.
@@ -244,42 +248,6 @@ void applyScalarBoundaries(float *su, float *sp, float scalarNum) {
 	// Empty for now. scalarNum gives ID of the scalar variable function is applied to.
 }
 
-void setup() {
-	BIGNUM = (float) pow(10, 20);
-	SMALLNUM = - BIGNUM;
-
-	ALPHA = 0.1;
-
-	L = 1.0;
-	N = 5;
-	CELLSTEP = L / (float) CELLNUM; //Fine but because of boundary overhang this won't actually be the sim length
-	AREA = CELLSTEP * CELLSTEP;
-
-	DENSITY = 1;
-	GAMMA = 0.1;
-
-	U_FIELD = vector(1, N);
-	U_FIELD_PRIME = vector(1, N); //Figure out how to zero these properly given that zerovector only works with zero-indexed.
-	U_FIELD_STAR = vector(1, N);
-	// Maybe MAT_zerovector(U_FIELD + 1, N)?
-
-	P_FIELD = vector(0, N);
-	P_FIELD_PRIME = vector(0, N);
-
-	MAT_zerovector_range(U_FIELD, 1, N);
-	MAT_zerovector_range(U_FIELD_PRIME, 1, N);
-	MAT_zerovector_range(U_FIELD_STAR, 1, N);
-
-	MAT_zerovector(P_FIELD, N + 1); //0 to N is N+1 elements
-	MAT_zerovector(P_FIELD_PRIME, N + 1);
-
-	VERBOSE = 1;
-
-	initializeUField();
-	initializePField();
-	setupBoundaries();
-}
-
 void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, float *su, int target_isoneindexed, int n_var) {
 	// Solves the form of equation that comes up a few times, where (cp[n] - sp[n])phi[n] = sum(c[nb]phi[nb]) + su
 	// or rather (cp[n] - sp[n])phi[n] - sum(c[nb]phi[nb]) = su
@@ -308,7 +276,7 @@ void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, floa
 		}
 	}
 
-	float *temp = MAT_solve_gausselim(coeff, rhs, n_var)
+	float *temp = MAT_solve_gausselim(coeff, rhs, n_var);
 	for (int i = 0; i < n_var; i++) {
 		i_ref = i + target_isoneindexed;
 		target[i_ref] = temp[i];
@@ -319,8 +287,56 @@ void solveSystem(float *target, float *cp, float *cw, float *ce, float *sp, floa
 	// The above mess was done because I don't know how c memory management works. Is it as simple as target = temp - isoneindexed? Help
 }
 
+
+void setupBoundaries() {
+	// intializes P and U values at relevant inletsand outlets to what they will stay at for differencing. A different function is in charge of cancelling changes during differencing
+	U_FIELD[1] = 10; // inlet velocity = 10 m/s
+	P_FIELD[0] = 10; //inlet pressure = 10Pa
+	P_FIELD[N - 1] = 0; // outlet pressure = 0Pa
+	// That's all the constants in this 1d case. For 2d, adapt to be procedural 
+}
+
+void setup() {
+	BIGNUM = (float) pow(10, 20);
+	SMALLNUM = - BIGNUM;
+
+	ALPHA = 0.1;
+
+	L = 1.0;
+	N = 5;
+	CELLSTEP = L / (float) N; //Fine but because of boundary overhang this won't actually be the sim length
+	AREA = CELLSTEP * CELLSTEP;
+
+	DENSITY = 1;
+	GAMMA = 0.1;
+
+	U_FIELD = vector(1, N);
+	U_FIELD_PRIME = vector(1, N); //Figure out how to zero these properly given that zerovector only works with zero-indexed.
+	U_FIELD_STAR = vector(1, N);
+	// Maybe MAT_zerovector(U_FIELD + 1, N)?
+
+	P_FIELD = vector(0, N);
+	P_FIELD_PRIME = vector(0, N);
+
+	MAT_zerovector_range(U_FIELD, 1, N);
+	MAT_zerovector_range(U_FIELD_PRIME, 1, N);
+	MAT_zerovector_range(U_FIELD_STAR, 1, N);
+
+	MAT_zerovector(P_FIELD, N + 1); //0 to N is N+1 elements
+	MAT_zerovector(P_FIELD_PRIME, N + 1);
+
+	VERBOSE = 1;
+
+	initializeUField();
+	initializePField();
+	setupBoundaries();
+}
+
 int main() {
+	printf("Setting up...\n");
 	setup();
+	printf("Setup Complete. Beginning convergence loops.\n");
+
 	float *ap, *aw, *ae, *su, *sp; //same a vectors for each differencing operation, but U stuff is 1-indexed. Remember that
 	sp = vector(0, N);
 	su = vector(0, N);
@@ -328,7 +344,7 @@ int main() {
 	aw = vector(0, N);
 	ae = vector(0, N);
 	// setup has already initialized guesses of p and u. Begin convergence loop
-	int notconverged = 1
+	int notconverged = 1;
 	while (notconverged) {
 		// 1. Solve momentum equations
 		// 1a momentum differencing
@@ -341,6 +357,8 @@ int main() {
 		// 1c solve equations, feeding results into u star- this gives the 'initial guess' of velocities from the stated pressure field
 		solveSystem(U_FIELD_STAR, ap, aw, ae, sp, su, 0, N); // there should be N velocity elements, and u cells are not i-capitalized
 
+		MAT_printvector_range(U_FIELD_STAR, 1, N);
+
 		MAT_zerovector(ap, N+1);
 		MAT_zerovector(aw, N+1);
 		MAT_zerovector(ae, N+1);
@@ -350,11 +368,13 @@ int main() {
 
 		// 2. Solve pressure correction equation
 		// 2a pressure differencing -- the differencing here is quite different from standard
-		applydifference_pressure(ap, aw, ae, 1);
+		applydifference_pressure(ap, aw, ae);
 		// 2b apply pressure differencing boundary influences
 		applyPressureBoundaries(su, sp);
 		// 2c solve equations, feeding results into pressure correction matrix
-		solveSystem(P_FIELD_PRIME)
+		solveSystem(P_FIELD_PRIME, ap, aw, ae, sp, su, 1, N); // WARNING: at time of writing unsure whether pressure cells 1-indexed
+		// Also arguments are basically a guess here - big gap between code spurts present
+		simerror("Whoops, no code past this point");
 		// 3. Apply U, P correction
 		// 3a add solved correction values into u and p matrices
 		// note: see p189 for details on under-relaxation - it's not what you think
