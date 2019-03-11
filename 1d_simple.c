@@ -339,10 +339,15 @@ int main() {
 
 	float *ap, *aw, *ae, *su, *sp; //same a vectors for each differencing operation, but U stuff is 1-indexed. Remember that
 	sp = vector(0, N);
+	MAT_zerovector(sp, N+1);
 	su = vector(0, N);
+	MAT_zerovector(su, N+1);
 	ap = vector(0, N);
+	MAT_zerovector(ap, N+1);
 	aw = vector(0, N);
+	MAT_zerovector(aw, N+1);
 	ae = vector(0, N);
+	MAT_zerovector(ae, N+1);
 	// setup has already initialized guesses of p and u. Begin convergence loop
 	int notconverged = 1;
 	while (notconverged) {
@@ -351,12 +356,26 @@ int main() {
 		applydifference_hybrid(ap, aw, ae, 0); // lowercase i for inter scalar-cell values. 
 				// Eventually split this off the generic differencing function to properly treat velocity diffusion different from mass diffusion.
 				//  -> -> -> Check that indexing is the same as in solvesystem!
+		printf("Momentum differencing complete. Coefficient vectors:\n");
+		printf("Ap\n");
+		MAT_printvector(ap, N+1);
+		printf("Aw\n");
+		MAT_printvector(aw, N+1);
+		printf("Ae\n");
+		MAT_printvector(ae, N+1);
 		// 1b applying momentum boundary constraints
 		applyVelocityBoundaries(su, sp);
 		deltaPressure(su); // aside from boundaries, pressure difference effects need to be fed in to su. This just adds
+		printf("Momentum boundaries calculated. Coefficient vectors:\n");
+		printf("Su\n");
+		MAT_printvector(su, N+1);
+		printf("Sp\n");
+		MAT_printvector(sp, N+1);
 		// 1c solve equations, feeding results into u star- this gives the 'initial guess' of velocities from the stated pressure field
-		solveSystem(U_FIELD_STAR, ap, aw, ae, sp, su, 0, N); // there should be N velocity elements, and u cells are not i-capitalized
+		solveSystem(U_FIELD_STAR, ap, aw, ae, sp, su, 1, N); // there should be N velocity elements, and u cells are not i-capitalized
+		// CHECK IF U CELLS REALLY SHOULD BE 1-INDEXED: MAKES THINGS WORK BUT ISN'T NECESSARILY TRUE
 
+		printf("U_FIELD_STAR computed. Results follow:\n");
 		MAT_printvector_range(U_FIELD_STAR, 1, N);
 
 		MAT_zerovector(ap, N+1);
